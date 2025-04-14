@@ -69,6 +69,7 @@ def autosort(path: pathlib.Path):
                 print("N: No, do not move file\n")
                 print("V: View file(s)\n")
                 print("?: Show this help\n")
+        # TODO: Only continue to the next sorter if an action was taken?
 
 
 def configure_logger() -> logging.Logger:
