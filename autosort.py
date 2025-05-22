@@ -36,21 +36,45 @@ def autosort(path: pathlib.Path):
     LOG.debug("Sorting file '{}'".format(path))
     for sorter in SORTERS:
         sorter_result = sorter.sort(path)
+        # Sorter does not handle this file
         if not sorter_result:
             continue
-        target_path = BASE_DIR / sorter_result
-        print("'{}' → '{}' ".format(
-            path,
-            termcolor.colored(target_path, "red") if target_path.exists() else termcolor.colored(target_path, "green"),
-        ), end="")
-        process1: Optional[subprocess.Popen] = None
-        process2: Optional[subprocess.Popen] = None
+        # Sorter returns a single target path
+        elif isinstance(sorter_result, pathlib.PurePath):
+            target_path = BASE_DIR / sorter_result
+            print("'{}' → '{}' ".format(
+                path,
+                termcolor.colored(target_path, "red") if target_path.exists() else termcolor.colored(target_path, "green"),
+            ), end="")
+        # Sorter returns a list of page ranges and respective target paths
+        elif isinstance(sorter_result, list):
+            # TODO: What do we do if multiple page ranges point to the same target_path? We should highlight this.
+            for page_range, target_path in sorter_result:
+                target_path = BASE_DIR / target_path
+                print("'{}:{}' → '{}' ".format(
+                    path,
+                    page_range,
+                    termcolor.colored(target_path, "red") if target_path.exists() else termcolor.colored(target_path, "green"),
+                ))
         while True:
             user_input = input("(Y/n/v/?)?")
             if user_input in {"Y", "y", "Z", "z", ""}:
-                LOG.debug("Moving '{}' to '{}'".format(path, target_path))
-                path.rename(target_path)
-                break
+                if isinstance(sorter_result, pathlib.PurePath):
+                    LOG.debug("Moving '{}' to '{}'".format(path, target_path))
+                    path.rename(target_path)
+                    break
+                elif isinstance(sorter_result, list):
+                    # TODO: If the page ranges don't cover all pages, we shouldn't remove the source file!
+                    for page_range, target_path in sorter_result:
+                        target_path = BASE_DIR / target_path
+                        print("'Moving {}:{}' to '{}' ".format(
+                            path,
+                            page_range,
+                            target_path,
+                        ))
+                        subprocess.run(["pdftk", path, "cat", page_range, "output", target_path], check=True)
+                    path.unlink()
+                    break
             elif user_input in {"N", "n"}:
                 break
             elif user_input in {"V", "v"}:
@@ -61,8 +85,12 @@ def autosort(path: pathlib.Path):
                 next iteration). We have to rely on the user to quit the view processes when they are finished
                 reviewing the files.
                 """
-                if(target_path.exists()):
+                if isinstance(target_path, pathlib.PurePath) and target_path.exists():
                     subprocess.Popen(["xdg-open", target_path])
+                elif isinstance(sorter_result, list):
+                    for page_range, target_path in sorter_result:
+                        target_path = BASE_DIR / target_path
+                        subprocess.Popen(["xdg-open", target_path])
                 subprocess.Popen(["xdg-open", path])
             elif user_input == "?":
                 print("Y: Yes, move file\n")
