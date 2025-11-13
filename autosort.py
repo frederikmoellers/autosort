@@ -6,6 +6,7 @@ import logging
 import logging.config
 import pathlib
 import pkgutil
+import platform
 import subprocess
 
 import sorters
@@ -86,12 +87,12 @@ def autosort(path: pathlib.Path):
                 reviewing the files.
                 """
                 if isinstance(target_path, pathlib.PurePath) and target_path.exists():
-                    subprocess.Popen(["xdg-open", target_path])
+                    view_file(target_path)
                 elif isinstance(sorter_result, list):
                     for page_range, target_path in sorter_result:
                         target_path = BASE_DIR / target_path
-                        subprocess.Popen(["xdg-open", target_path])
-                subprocess.Popen(["xdg-open", path])
+                        view_file(target_path)
+                view_file(path)
             elif user_input == "?":
                 print("Y: Yes, move file\n")
                 print("N: No, do not move file\n")
@@ -129,6 +130,21 @@ def configure_logger() -> logging.Logger:
         },
     })
     return logging.getLogger("autosort")
+
+
+def view_file(path: pathlib.Path):
+    """
+    Opens a file in the operating system's default viewer.
+    """
+    operating_system = platform.system()
+    if operating_system == "Darwin":
+        command = "open"
+    elif operating_system == "Linux":
+        command = "xdg-open"
+    else:
+        raise Exception("Cannot view file '{}'! Unknown operating system '{}'".format(path, operating_system))
+    subprocess.Popen([command, path])
+
 
 
 BASE_DIR: pathlib.Path
