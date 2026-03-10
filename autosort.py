@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import importlib.util
 import inspect
 import logging
 import logging.config
@@ -150,12 +151,6 @@ def view_file(path: pathlib.Path):
 BASE_DIR: pathlib.Path
 LOG: logging.Logger = configure_logger()
 SORTERS: Set[sorters.Sorter] = set()
-# automatically load all available parser modules
-for loader, name, is_pkg in pkgutil.walk_packages(sorters.__path__):
-    sorter_module = loader.find_module(name).load_module(name)
-    for classname, classobj in inspect.getmembers(sorter_module):
-        if inspect.isclass(classobj) and issubclass(classobj, sorters.Sorter) and classobj is not sorters.Sorter:
-            SORTERS.add(classobj(LOG))
 THIS_SCRIPT: pathlib.Path = pathlib.Path(sys.argv[0]).resolve()
 
 
@@ -188,6 +183,21 @@ if __name__ == "__main__":
     arguments = argument_parser.parse_args()
     BASE_DIR = arguments.base_dir
     LOG.setLevel(arguments.log_level)
+
+    # automatically load all available parser modules
+    LOG.debug("Looking for sorters in '{}'".format(sorters.__path__))
+    for module_finder, name, is_pkg in pkgutil.walk_packages(sorters.__path__):
+        LOG.debug("Found sorter module '{}'".format(name))
+        spec = module_finder.find_spec(name)
+        sorter_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(sorter_module)
+        for classname, classobj in inspect.getmembers(sorter_module):
+            if inspect.isclass(classobj) and issubclass(classobj, sorters.Sorter) and classobj is not sorters.Sorter:
+                sorter_obj = classobj(LOG)
+                LOG.debug("Added sorter: {}".format(sorter_obj))
+                SORTERS.add(sorter_obj)
+
+    # sort paths given by arguments
     for path in arguments.paths:
         # if path is a directory, call autosort for all files within
         autosort(path)
