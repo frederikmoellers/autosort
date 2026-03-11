@@ -12,6 +12,14 @@ documents like invoices, bank statements etc.
 Copy some example sorters into the `sorters` directory. Adapt the code as
 necessary to work on *your* documents and to sort into *your* folder structure.
 
+### Prerequisites
+
+You need to have the following applications available:
+
+- pdfinfo (e.g. from package `poppler-tools` in openSUSE Tumbleweed)
+- pdftk (if any of your sorters wants to split a PDF)
+- tesseract (if your sorters need it for OCR)
+
 Then, run `autosort.py` with the relevant parameters to sort new files.
 
 ## Will this overwrite/delete my files?
