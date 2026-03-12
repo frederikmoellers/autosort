@@ -2,7 +2,7 @@ import logging
 import pathlib
 
 from abc import ABC, abstractmethod
-from typing import Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple
 
 
 class Sorter(ABC):
@@ -15,7 +15,7 @@ class Sorter(ABC):
 
     @classmethod
     @abstractmethod
-    def sort(cls, path: pathlib.Path) -> Optional[Union[pathlib.PurePath, Tuple[str, pathlib.PurePath]]]:
+    def sort(cls, path: pathlib.Path) -> Optional[Union[pathlib.PurePath, List[Tuple[str, pathlib.PurePath]]]]:
         """
         Determine where the file should be moved to.
         :return: Either of the following:
