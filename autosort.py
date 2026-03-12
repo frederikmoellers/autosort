@@ -74,6 +74,7 @@ def autosort(path: pathlib.Path):
                             page_range,
                             target_path,
                         ))
+                        LOG.debug("Calling: {}".format(["pdftk", path, "cat", page_range, "output", target_path]))
                         subprocess.run(["pdftk", path, "cat", page_range, "output", target_path], check=True)
                     path.unlink()
                     break
