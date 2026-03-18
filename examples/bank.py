@@ -4,7 +4,7 @@ import pathlib
 import re
 import subprocess
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from sorters import Sorter
 
 
@@ -24,7 +24,8 @@ class AccountStatement(Sorter):
             "1234567891": "Savings Account - 1234567891",
         }
 
-    def extract_data(self, path: pathlib.Path) -> Dict[str, str]:
+    @staticmethod
+    def extract_data(path: pathlib.Path) -> Dict[str, str]:
         # Account number
         account_number: str = subprocess.check_output(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "434", "-y", "177", "-W", "61", "-H", "12",
@@ -68,7 +69,8 @@ class CreditCardStatement(Sorter):
             "456": "Credit Card B",
         }
 
-    def extract_date(self, path: pathlib.Path) -> Dict[str, str]:
+    @staticmethod
+    def extract_date(path: pathlib.Path) -> Dict[str, str]:
         pdf_date: str = subprocess.check_output(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "153", "-y", "270", "-W", "75", "-H", "15", str(path.resolve()),
              "-"]
@@ -102,7 +104,8 @@ class Message(Sorter):
         Sorter.__init__(self, logger)
         self.re = re.compile(r'(?P<account_nr>\d{10})_\d{4}_(?P<title>Message)_from_(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})_\d+\.pdf')
 
-    def extract_date(self, path: pathlib.Path) -> Dict[str, str]:
+    @staticmethod
+    def extract_date(path: pathlib.Path) -> Dict[str, str]:
         pdf_date: str = subprocess.check_output(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "390", "-y", "154", "-W", "52", "-H", "10", str(path.resolve()),
              "-"]
@@ -113,7 +116,8 @@ class Message(Sorter):
             "year": pdf_date[6:10]
         }
 
-    def extract_title(selfself, path: pathlib.Path) -> str:
+    @staticmethod
+    def extract_title(path: pathlib.Path) -> str:
         return subprocess.check_output(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "108", "-y", "317", "-W", "474", "-H", "17", str(path.resolve()),
              "-"]

@@ -12,7 +12,8 @@ class MobileInvoice(Sorter):
         Sorter.__init__(self, logger)
         self.re = re.compile(r'Invoice_((?P<month_off>\d{2})_(?P<year_off>\d{4})_)?(?P<number>(R\d{10}|\d{14}))\.pdf')
 
-    def get_customer_account_no(self, file: pathlib.Path) -> Optional[str]:
+    @staticmethod
+    def get_customer_account_no(file: pathlib.Path) -> Optional[str]:
         customer_account_no: str = subprocess.run(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "505", "-y", "182", "-W", "56", "-H", "14", str(file.resolve()), "-"],
             check=True,
@@ -30,7 +31,8 @@ class MobileInvoice(Sorter):
         ).stdout.decode().strip()
         return customer_account_no
 
-    def get_date(self, file: pathlib.Path) -> Dict[str, int]:
+    @staticmethod
+    def get_date(file: pathlib.Path) -> Dict[str, int]:
         # try to extract from PDF
         month_year: str = subprocess.run(
             ["pdftotext", "-f", "1", "-l", "1", "-x", "287", "-y", "260", "-W", "150", "-H", "14", str(file.resolve()), "-"],
