@@ -23,16 +23,24 @@ def autosort(path: pathlib.Path):
     :param path: Path to a file or a directory containing files to be sorted
     :return: None
     """
+    LOG.debug("Calling autosort('{}')".format(path))
+    # resolve symlinks
+    path = path.resolve()
     # check if path exists at all
     if not path.exists():
         raise FileNotFoundError("Path '{}' does not exist!".format(path))
     # handle directories recursively
     if path.is_dir():
+        if path in SORTED_DIRECTORIES:
+            LOG.debug("Not sorting directory '{}' again.".format(path))
+            return
+        SORTED_DIRECTORIES.add(path)
         LOG.debug("Recursively sorting directory '{}'".format(path))
         for dir_entry in path.glob("*"):
             autosort(dir_entry)
+        return
     # do not handle this script itself
-    if path.resolve() == THIS_SCRIPT:
+    if path == THIS_SCRIPT:
         return
     # try sorters until one handles this file
     LOG.debug("Sorting file '{}'".format(path))
@@ -58,9 +66,12 @@ def autosort(path: pathlib.Path):
                     page_range,
                     termcolor.colored(target_path, "red") if target_path.exists() else termcolor.colored(target_path, "green"),
                 ))
+        # Save whether we moved the file and should skip all remaining sorters
+        moved: bool = False
         while True:
             user_input = input("(Y/n/v/?)?")
             if user_input in {"Y", "y", "Z", "z", ""}:
+                moved = True
                 if isinstance(sorter_result, pathlib.PurePath):
                     LOG.debug("Moving '{}' to '{}'".format(path, target_path))
                     path.rename(target_path)
@@ -100,7 +111,9 @@ def autosort(path: pathlib.Path):
                 print("N: No, do not move file\n")
                 print("V: View file(s)\n")
                 print("?: Show this help\n")
-        # TODO: Only continue to the next sorter if an action was taken?
+        # If the file was moved, don't try any more sorters
+        if moved:
+            break
 
 
 def configure_logger() -> logging.Logger:
@@ -150,9 +163,15 @@ def view_file(path: pathlib.Path):
 
 
 BASE_DIR: pathlib.Path
+# Base directory where to put sorted files
 LOG: logging.Logger = configure_logger()
+# A Logger instance for logging
+SORTED_DIRECTORIES: Set[pathlib.Path] = set()
+# A set to keep track of sorted directories in cases of circular symlink references
 SORTERS: Set[sorters.Sorter] = set()
+# A set containing all Sorter objects
 THIS_SCRIPT: pathlib.Path = pathlib.Path(sys.argv[0]).resolve()
+# The path of this script (to prevent calling sort() on itself)
 
 
 # if called as an executable script
