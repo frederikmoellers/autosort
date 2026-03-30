@@ -1,7 +1,7 @@
+import lib.pdf
 import logging
 import pathlib
 import re
-import subprocess
 
 from typing import Dict, Optional
 from sorters import Sorter
@@ -18,9 +18,14 @@ class NurseryInvoice(Sorter):
         if not match:
             self.logger.debug("{}: No match.".format(self.__class__.__name__))
             return None
-        pdf_subject: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "53", "-y", "298", "-W", "155", "-H", "84", str(path.resolve()), "-"]
-        ).decode().strip()
+        pdf: lib.pdf.PDF = lib.pdf.PDF(path)
+        pdf_subject: str = pdf.get_text(1, 53, 298, 323, 84)
+        if pdf_subject not in {
+            "Nursery XYZ\nFirstname Lastname\n\nINVOICE",
+            "Nursery XYZ\nFirstname\n\nINVOICE",
+            "Nursery XYZ, Address\nFirstname Lastname\n\nINVOICE",
+        }:
+            self.logger.debug("'{}'".format(pdf_subject))
         if pdf_subject != "Nursery XYZ\nFirstname Lastname\n\nINVOICE":
             return None
         data = {

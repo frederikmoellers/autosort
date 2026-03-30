@@ -1,7 +1,7 @@
+import lib.pdf
 import logging
 import pathlib
 import re
-import subprocess
 
 from typing import Dict, Optional
 from sorters import Sorter
@@ -19,9 +19,8 @@ class NewspaperInvoice(Sorter):
             self.logger.debug("{}: No match.".format(self.__class__.__name__))
             return None
         # check sender
-        sender: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "54", "-y", "155", "-W", "160", "-H", "15", str(path.resolve()), "-"]
-        ).decode().strip()
+        pdf = lib.pdf.PDF(path)
+        sender: str = pdf.get_text(1, 54, 155, 160, 15)
         if sender != "Newspaper Inc. 12345 Megacity":
             return None
         # Just move it into the directory, but don't rename the file

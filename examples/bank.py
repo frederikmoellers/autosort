@@ -1,8 +1,8 @@
 import json
+import lib.pdf
 import logging
 import pathlib
 import re
-import subprocess
 
 from typing import Dict, List, Optional
 from sorters import Sorter
@@ -25,22 +25,15 @@ class AccountStatement(Sorter):
         }
 
     @staticmethod
-    def extract_data(path: pathlib.Path) -> Dict[str, str]:
+    def extract_date(pdf: lib.pdf.PDF) -> Dict[str, str]:
         # Account number
-        account_number: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "434", "-y", "177", "-W", "61", "-H", "12",
-             str(path.resolve()), "-"]
-        ).decode().strip().replace(" ", "")
+        account_number: str = pdf.get_text(1, 434, 177, 61, 12).replace(" ", "")
         data: Dict[str, str] = {
             "acc_number": account_number,
         }
         # Issue
-        issue_year: List[str] = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "528", "-y", "140", "-W", "53", "-H", "13",
-             str(path.resolve()), "-"]
-        ).decode().strip().split("/")
-        data["issue"] = issue_year[0].rjust(2, "0")
-        data["year"] = issue_year[1]
+        data["issue"], data["year"] = pdf.get_text(1, 528, 140, 53, 13).split("/")
+        data["issue"] = data["issue"].rjust(2, "0")
         return data
 
     def sort(self, path: pathlib.Path) -> Optional[pathlib.PurePath]:
@@ -53,7 +46,8 @@ class AccountStatement(Sorter):
             "issue": match.group("issue"),
             "year": match.group("year"),
         }
-        data.update(self.extract_data(path))
+        pdf: lib.pdf.PDF = lib.pdf.PDF(path)
+        data.update(self.extract_data(pdf))
         data["foldername"] = self.foldernames[data["acc_number"]]
         return pathlib.PurePath(
             "Bank/Statements/{data[foldername]}/{data[year]}-{data[issue]}.pdf".format(data=data))
@@ -70,11 +64,8 @@ class CreditCardStatement(Sorter):
         }
 
     @staticmethod
-    def extract_date(path: pathlib.Path) -> Dict[str, str]:
-        pdf_date: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "153", "-y", "270", "-W", "75", "-H", "15", str(path.resolve()),
-             "-"]
-        ).decode().strip()
+    def extract_date(pdf: lib.pdf.PDF) -> Dict[str, str]:
+        pdf_date: str = pdf.get_text(1, 153, 270, 75, 15)
         return {
             "day": pdf_date[0:2],
             "month": pdf_date[3:5],
@@ -93,7 +84,8 @@ class CreditCardStatement(Sorter):
             "year": match.group("year"),
             "cc_number": match.group("cc_number"),
         }
-        data.update(self.extract_date(path))
+        pdf: lib.pdf.PDF = lib.pdf.PDF(path)
+        data.update(self.extract_date(pdf))
         data["foldername"] = self.foldernames[data["cc_number"]]
         return pathlib.PurePath(
             "Bank/Statements/{data[foldername]}/{data[year]}-{data[month]}-{data[day]}.pdf".format(data=data))
@@ -105,11 +97,8 @@ class Message(Sorter):
         self.re = re.compile(r'(?P<account_nr>\d{10})_\d{4}_(?P<title>Message)_from_(?P<year>\d{4})\.(?P<month>\d{2})\.(?P<day>\d{2})_\d+\.pdf')
 
     @staticmethod
-    def extract_date(path: pathlib.Path) -> Dict[str, str]:
-        pdf_date: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "390", "-y", "154", "-W", "52", "-H", "10", str(path.resolve()),
-             "-"]
-        ).decode().strip()
+    def extract_date(pdf: lib.pdf.PDF) -> Dict[str, str]:
+        pdf_date: str = pdf.get_text(1, 390, 154, 52, 10)
         return {
             "day": pdf_date[0:2],
             "month": pdf_date[3:5],
@@ -117,11 +106,8 @@ class Message(Sorter):
         }
 
     @staticmethod
-    def extract_title(path: pathlib.Path) -> str:
-        return subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "108", "-y", "317", "-W", "474", "-H", "17", str(path.resolve()),
-             "-"]
-        ).decode().strip()
+    def extract_title(pdf: lib.pdf.PDF) -> str:
+        return pdf.get_text(1, 108, 317, 474, 17)
 
     def sort(self, path: pathlib.Path) -> Optional[pathlib.PurePath]:
         data: Dict[str, str]
@@ -135,8 +121,9 @@ class Message(Sorter):
             "year": match.group("year"),
             "account_nr": match.group("account_nr"),
         }
-        data.update(self.extract_date(path))
-        data["title"] = self.extract_title(path)
+        pdf: lib.pdf.PDF = lib.pdf.PDF(path)
+        data.update(self.extract_date(pdf))
+        data["title"] = self.extract_title(pdf)
         self.logger.debug("{}: Match! Extracted data:".format(self.__class__.__name__))
         self.logger.debug(json.dumps(data))
         if data["title"] == "Interest rate adjustment":

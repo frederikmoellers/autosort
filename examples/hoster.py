@@ -1,7 +1,7 @@
+import lib.pdf
 import logging
 import pathlib
 import re
-import subprocess
 
 from typing import Dict, Optional
 from sorters import Sorter
@@ -18,10 +18,9 @@ class HosterInvoice(Sorter):
         if not match:
             self.logger.debug("{}: No match.".format(self.__class__.__name__))
             return None
+        pdf: lib.pdf.PDF = lib.pdf.PDF(path)
         # check customer number
-        customer_no: str = subprocess.check_output(
-            ["pdftotext", "-f", "1", "-l", "1", "-x", "523", "-y", "209", "-W", "46", "-H", "9", str(path.resolve()), "-"]
-        ).decode().strip()
+        customer_no: str = pdf.get_text(1, 523, 209, 46, 9)
         if customer_no != "K1234567890":
             return None
         # Just move it into the directory, but don't rename the file
